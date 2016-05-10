@@ -2,43 +2,51 @@ import Cycle from '@cycle/core'
 import {Observable} from 'rx'
 import {div, ul, li, makeDOMDriver} from 'cycle-snabbdom'
 import {intersection, difference, sortBy} from 'lodash'
+const M = require('@mfjs/core')
+const RxM = require('@mfjs/rx')({latest:true})
+M.profile('defaultMinimal')
 
 function intent(keydownSource) {
-  return keydownSource
-    .map(ev => ev.code.replace('Key', ''))
-    .filter(str => str.length === 1)
+  let e = M(keydownSource)
+  let str = e.code.replace('Key', '')
+  if (str.length === 1)
+    return str;
+  else
+    return M(M.empty())
 }
 
 function model(action$) {
-  const initialState = ['A']
-  return action$.startWith(initialState).startWith([]).scan((acc, key) => {
-    const index = acc.indexOf(key)
-    if (index === -1) {
-      return acc.concat(key).sort()
-    }
-    const newAcc = acc.slice()
-    newAcc.splice(index, 1)
-    return newAcc
-  })
+  M.answer([])
+  let state = ["A"]
+  M.answer(state.slice())
+  const key = M(action$)
+  const index = state.indexOf(key)
+  if (index !== -1)
+    state.splice(index, 1)
+  else {
+    state.push(key)
+    state.sort()
+  }
+  return state.slice();
 }
 
 function determineDeltaPoints(state$) {
-  return state$.pairwise().flatMap(([before, after]) => {
-    const addedPoints = difference(after, before).map(key =>
+  let [before, after] = M(state$.pairwise());
+  const addedPoints = difference(after, before).map(key =>
       ({key, value: 0, target: 1})
     )
-    const removedPoints = difference(before, after).map(key =>
+  const removedPoints = difference(before, after).map(key =>
       ({key, value: 1, target: 0})
     )
-    const points = addedPoints.concat(removedPoints)
-    return Observable.from(sortBy(points, 'key'))
-  })
+  const points = addedPoints.concat(removedPoints)
+  const res =  M(Observable.from(sortBy(points, 'key')));
+  return res
 }
 
 function expandAsRenderingFrames(point$) {
-  return point$.flatMapLatest(point =>
-    Observable.interval(10).map(point).take(100)
-  )
+  const point = M(point$)
+  M(Observable.interval(10).take(100))
+  return point
 }
 
 function calculateAnimationSteps(point$) {
@@ -67,16 +75,14 @@ function calculateAnimationSteps(point$) {
       }
     })
   }
-
-  return point$.scan((acc, point) => {
-    const newAcc = incorporateNewPoint(acc, point)
-    const progressedAcc = progressEachPoint(acc, newAcc)
-    const sanitizedAcc = progressedAcc.filter(point =>
-      !(point.target === 0 && point.value === 0)
-    )
-    const sortedAcc = sortBy(sanitizedAcc, 'key')
-    return sortedAcc
-  }, [])
+  M.ref(acc)
+  let acc = []
+  const point = M(point$)
+  const newAcc = incorporateNewPoint(acc, point)
+  const progressedAcc = progressEachPoint(acc, newAcc)
+  const sanitizedAcc = progressedAcc.filter(point =>
+      !(point.target === 0 && point.value === 0))
+  return acc = sortBy(sanitizedAcc, 'key')
 }
 
 function animate(state$) {
@@ -90,17 +96,16 @@ function view(state$) {
   const animatedState$ = animate(state$)
   const ulStyle = {padding: '0', listStyle: 'none', display: 'flex'}
   const liStyle = {fontSize: '50px'}
-  return animatedState$.map(animStates =>
-    ul({style: ulStyle}, animStates.map(animState =>
-      li({style: {fontSize: `${animState.value * 50}px`}}, animState.key)
-    ))
-  )
+  const animStates = M(animatedState$)
+  return ul({style: ulStyle}, animStates.map(animState => 
+                                             li({style: {fontSize: `${animState.value * 50}px`}}, animState.key)
+  ))
 }
 
 function main(sources) {
-  const key$ = intent(sources.Keydown)
-  const state$ = model(key$)
-  const vtree$ = view(state$)
+  const key$ = RxM.run(() => intent(sources.Keydown))
+  const state$ = RxM.run(() => model(key$))
+  const vtree$ = RxM.run(() => view(state$))
   return {
     DOM: vtree$,
   }

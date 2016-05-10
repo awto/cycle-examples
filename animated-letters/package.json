@@ -9,18 +9,21 @@
     "cycle-snabbdom": "^1.0.3",
     "lodash": "^4.2.1",
     "rx": "^4.0.7",
-    "snabbdom-to-html": "2.0.x"
+    "snabbdom-to-html": "2.0.x",
+    "@mfjs/core": "1.0.0",
+    "@mfjs/rx": "1.0.0"
   },
   "devDependencies": {
     "babel": "5.6.x",
     "babelify": "6.1.x",
     "browserify": "11.0.1",
-    "mkdirp": "0.5.x"
+    "mkdirp": "0.5.x",
+    "@mfjs/compiler": "1.0.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "prebrowserify": "mkdirp dist",
-    "browserify": "browserify src/main.js -t babelify --outfile dist/main.js",
+    "browserify": "browserify src/main.js -t babelify -t @mfjs/compiler/monadify --outfile dist/main.js",
     "start": "npm install && npm run browserify && echo 'OPEN index.html IN YOUR BROWSER'"
   }
 }
